@@ -1,8 +1,11 @@
 package com.example.android.sunshine.app;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.text.format.Time;
 import android.util.Log;
@@ -12,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -34,6 +38,8 @@ import java.util.ArrayList;
  */
 public class ForecastFragment extends Fragment {
     private final String LOG_TAG = ForecastFragment.class.getSimpleName();
+    private final double CELCIUS_TO_FAHRENHEIT_RATIO = 9/5;
+    private final int CELCIUS_TO_FAHRENHEIT_OFFSET = 32;
 
     private ArrayAdapter<String> mForecastAdapter;
 
@@ -46,7 +52,13 @@ public class ForecastFragment extends Fragment {
 
         // We have options menu
         setHasOptionsMenu(true);
+    }
 
+    @Override
+    public void onStart() {
+        refreshWeather();
+
+        super.onStart();
     }
 
     @Override
@@ -59,20 +71,6 @@ public class ForecastFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        ArrayList<String> weekForecast = new ArrayList<String>();
-        weekForecast.add("Today - Sunny - 88/75");
-        weekForecast.add("Tomorrow - Partly Cloudy - 76/68");
-        weekForecast.add("Tuesday - Partly Cloudy - 81/70");
-        weekForecast.add("Wednesday - Partly Cloudy - 80/72");
-        weekForecast.add("Thursday - Cloudy - 75/64");
-        weekForecast.add("Friday - Rainy - 75/73");
-        weekForecast.add("Today - Sunny - 88/75");
-        weekForecast.add("Tomorrow - Partly Cloudy - 76/68");
-        weekForecast.add("Tuesday - Partly Cloudy - 81/70");
-        weekForecast.add("Wednesday - Partly Cloudy - 80/72");
-        weekForecast.add("Thursday - Cloudy - 75/64");
-        weekForecast.add("Friday - Rainy - 75/73");
-
         mForecastAdapter =
                 new ArrayAdapter<String>(
                         //Context
@@ -81,13 +79,22 @@ public class ForecastFragment extends Fragment {
                         R.layout.list_item_forecast,
                         //Textview to fill
                         R.id.list_item_forecast_textview,
-                        //List of strings to put into textview
-                        weekForecast);
+                        //List of strings to put into textview (empty oupon creation
+                        new ArrayList<String>());
 
         View view = inflater.inflate(R.layout.fragment_main, container, false);
 
         ListView forecastListView = (ListView) view.findViewById(R.id.listview_forecast);
         forecastListView.setAdapter(mForecastAdapter);
+        forecastListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String forecastText = mForecastAdapter.getItem(position);
+                Intent openDetailsIntent = new Intent(getActivity(), DetailActivity.class);
+                openDetailsIntent.putExtra(Intent.EXTRA_TEXT, forecastText);
+                startActivity(openDetailsIntent);
+            }
+        });
 
         return view;
     }
@@ -101,11 +108,18 @@ public class ForecastFragment extends Fragment {
 
         //Refresh button (debugging only)
         if (id == R.id.action_refresh) {
-            new FetchWeatherTask().execute("02135");
+            refreshWeather();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void refreshWeather() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = preferences.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+
+        new FetchWeatherTask().execute(location);
     }
 
 
@@ -141,7 +155,7 @@ public class ForecastFragment extends Fragment {
                         .appendQueryParameter("q",postcodes[0])
                         .appendQueryParameter("mode", "json")
                         .appendQueryParameter("units","metric")
-                        .appendQueryParameter("cnt",Integer.toString(numForecastDays));
+                        .appendQueryParameter("cnt", Integer.toString(numForecastDays));
 
                 URL url = new URL(uriBuilder.build().toString());
 
@@ -214,8 +228,20 @@ public class ForecastFragment extends Fragment {
 
         /**
          * Prepare the weather high/lows for presentation.
+         * This includes rounding of the tenths, and converting to the approrporaite units
+         * The input values must be in units of celcius
          */
         private String formatHighLows(double high, double low) {
+            // We may need to convert to Fahrentheit
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String units = preferences.getString(getString(R.string.pref_units_key), getString(R.string.pref_units_default));
+
+            // Only convert if the prefence is for imperial (rremember: the passed in temperatures are in metric)
+            if (units.equals(getString(R.string.pref_units_imperial_value))) {
+                high = high * CELCIUS_TO_FAHRENHEIT_RATIO + CELCIUS_TO_FAHRENHEIT_OFFSET;
+                low = low * CELCIUS_TO_FAHRENHEIT_RATIO + CELCIUS_TO_FAHRENHEIT_OFFSET;
+            }
+
             // For presentation, assume the user doesn't care about tenths of a degree.
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
