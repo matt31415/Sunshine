@@ -1,10 +1,8 @@
 package com.example.android.sunshine.app;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -50,8 +48,7 @@ public class MainActivity extends ActionBarActivity {
 
     private void viewLocation() {
         // First create a URI for our location (this relies on the locaiton preference being a postal code)
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        String location = preferences.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+        String location = Utility.getPreferredLocation(this);
 
         //This feels ugly...  Shouldn't I be able to build a URI more elegantly than this?
         Uri mapUri = Uri.parse("geo:0,0?").buildUpon()
