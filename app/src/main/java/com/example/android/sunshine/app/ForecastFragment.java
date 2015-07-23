@@ -1,5 +1,6 @@
 package com.example.android.sunshine.app;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -14,6 +15,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.example.android.sunshine.app.data.WeatherContract;
@@ -29,7 +31,7 @@ public class ForecastFragment extends Fragment implements
     private final int CELCIUS_TO_FAHRENHEIT_OFFSET = 32;
     static final int WEATHER_LOADER_ID = 1;
 
-    private static final String[] FORECAST_COLUMNS = {
+    static final String[] FORECAST_COLUMNS = {
         // In this case the id needs to be fully qualified with a table name, since
         // the content provider joins the location & weather tables in the background
         // (both have an _id column)
@@ -73,13 +75,6 @@ public class ForecastFragment extends Fragment implements
     }
 
     @Override
-    public void onStart() {
-        updateWeather();
-
-        super.onStart();
-    }
-
-    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         // Inflate the menu; this adds items to the action bar if it is present.
         inflater.inflate(R.menu.forecastfragment, menu);
@@ -112,12 +107,29 @@ public class ForecastFragment extends Fragment implements
         ListView forecastListView = (ListView) view.findViewById(R.id.listview_forecast);
         forecastListView.setAdapter(mForecastAdapter);
 
+        forecastListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView parent, View view, int position, long id) {
+                // CursorAdapter returns a cursor at the correct position for getItem(), or null
+                // if it cannot seek to that position.
+                Cursor cursor = (Cursor) parent.getItemAtPosition(position);
+                if (cursor != null) {
+                    String locationSetting = Utility.getPreferredLocation(getActivity());
+
+                    Intent intent = new Intent(getActivity(), DetailActivity.class)
+                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)));
+                    startActivity(intent);
+                }
+            }
+        });
+
         return view;
     }
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
-        getLoaderManager().initLoader(WEATHER_LOADER_ID, null,this);
+        getLoaderManager().initLoader(WEATHER_LOADER_ID, null, this);
 
         super.onActivityCreated(savedInstanceState);
     }
@@ -142,6 +154,11 @@ public class ForecastFragment extends Fragment implements
         String location = Utility.getPreferredLocation(getActivity());
 
         new FetchWeatherTask(getActivity()).execute(location);
+    }
+
+    public void onLocationChanged() {
+        updateWeather();
+        getLoaderManager().restartLoader(WEATHER_LOADER_ID,null,this);
     }
 
     public Loader<Cursor> onCreateLoader(int loaderId, Bundle bundle) {

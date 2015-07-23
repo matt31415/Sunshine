@@ -17,11 +17,17 @@
 package com.example.android.sunshine.app;
 
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.ShareActionProvider;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -72,10 +78,16 @@ public class DetailActivity extends ActionBarActivity {
     /**
      * A placeholder fragment containing a simple view.
      */
-    public static class PlaceholderFragment extends Fragment {
+    public static class PlaceholderFragment extends Fragment implements
+            LoaderManager.LoaderCallbacks<Cursor>{
 
-        String mForecastStr;
+        private final String LOG_TAG = PlaceholderFragment.class.getSimpleName();
+        static final int WEATHER_DETAIL_LOADER_ID = 1;
+
         final static String SUNSHINE_HASHTAG = "#SunshineApp";
+        private String mForecastStr;
+
+        ShareActionProvider mShareActionProvider;
 
         public PlaceholderFragment() {
             setHasOptionsMenu(true);
@@ -87,10 +99,15 @@ public class DetailActivity extends ActionBarActivity {
             inflater.inflate(R.menu.detailfragment, menu);
 
             //Set up the share action
-            MenuItem shareItem = menu.findItem(R.id.action_share);
-            ShareActionProvider shareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(shareItem);
+            MenuItem shareItem = menu.findItem(R.id
+                    .action_share);
+            mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(shareItem);
 
-            shareActionProvider.setShareIntent(getShareIntent());
+            if(mForecastStr != null) {
+                mShareActionProvider.setShareIntent(getShareIntent());
+            }
+
+//            shareActionProvider.setShareIntent(getShareIntent());
         }
 
         @Override
@@ -99,11 +116,14 @@ public class DetailActivity extends ActionBarActivity {
 
             View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
 
-            mForecastStr = getActivity().getIntent().getStringExtra(Intent.EXTRA_TEXT);
-            TextView forecastTextView = (TextView)rootView.findViewById(R.id.forecastText);
-            forecastTextView.setText(mForecastStr);
-
             return rootView;
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            getLoaderManager().initLoader(WEATHER_DETAIL_LOADER_ID, null,this);
+
+            super.onActivityCreated(savedInstanceState);
         }
 
         Intent getShareIntent() {
@@ -114,6 +134,51 @@ public class DetailActivity extends ActionBarActivity {
             shareIntent.putExtra(Intent.EXTRA_TEXT, mForecastStr + " " + SUNSHINE_HASHTAG);
 
             return shareIntent;
+        }
+
+        @Override
+        public Loader<Cursor> onCreateLoader(int loaderId, Bundle args) {
+            switch (loaderId) {
+                case WEATHER_DETAIL_LOADER_ID :
+                    Uri weatherForLocationAndDateUri = null;
+                    Intent intent = getActivity().getIntent();
+
+                    if(intent != null) {
+                        weatherForLocationAndDateUri = intent.getData();
+                    }
+                    if (weatherForLocationAndDateUri != null) {
+                        return new CursorLoader(
+                                getActivity(),
+                                weatherForLocationAndDateUri,
+                                ForecastFragment.FORECAST_COLUMNS,
+                                null,
+                                null,
+                                null
+                        );
+                    }
+
+                default:
+                    Log.e(LOG_TAG, "Unrecognized loaderId value");
+                    return null;
+            }
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+            data.moveToFirst();
+            mForecastStr = Utility.convertCursorRowToUXFormat(data, getActivity());
+
+            TextView forecastTextView = (TextView) getActivity().findViewById(R.id.forecastText);
+            forecastTextView.setText(mForecastStr);
+
+            if (mShareActionProvider != null) {
+                mShareActionProvider.setShareIntent(getShareIntent());
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {
+
         }
     }
 }

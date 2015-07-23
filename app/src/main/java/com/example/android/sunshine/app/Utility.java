@@ -18,6 +18,7 @@ package com.example.android.sunshine.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.preference.PreferenceManager;
 
 
@@ -56,4 +57,27 @@ public class Utility {
         Date date = new Date(dateInMillis);
         return DateFormat.getDateInstance().format(date);
     }
+
+    /**
+     * Prepare the weather high/lows for presentation.
+     */
+     static String formatHighLows(double high, double low, Context context) {
+        boolean isMetric = Utility.isMetric(context);
+        String highLowStr = Utility.formatTemperature(high, isMetric) + "/" + Utility.formatTemperature(low, isMetric);
+        return highLowStr;
+    }
+
+    static String convertCursorRowToUXFormat(Cursor cursor, Context context) {
+        // get row indices for our cursor
+        String highAndLow = formatHighLows(
+                cursor.getDouble(ForecastFragment.COL_WEATHER_MAX_TEMP),
+                cursor.getDouble(ForecastFragment.COL_WEATHER_MIN_TEMP),
+                context);
+
+
+        return formatDate(cursor.getLong(ForecastFragment.COL_WEATHER_DATE)) +
+                " - " + cursor.getString(ForecastFragment.COL_WEATHER_DESC) +
+                " - " + highAndLow;
+    }
+
 }
