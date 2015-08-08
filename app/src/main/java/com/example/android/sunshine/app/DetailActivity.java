@@ -17,6 +17,7 @@
 package com.example.android.sunshine.app;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
@@ -29,8 +30,22 @@ public class DetailActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
         if (savedInstanceState == null) {
+            DetailFragment detailFragment = new DetailFragment();
+
+            // Check to ese if we were started from an intent.  If so, store the dateUri in the
+            // fragment's args
+            Intent intent = getIntent();
+            if (intent != null) {
+                Uri dateUri = intent.getData();
+                if (dateUri != null) {
+                    Bundle args = new Bundle();
+                    args.putParcelable(DetailFragment.DATE_URI_KEY, dateUri);
+                    detailFragment.setArguments(args);
+                }
+            }
+
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new DetailFragment())
+                    .add(R.id.weather_detail_container, detailFragment)
                     .commit();
         }
     }

@@ -30,6 +30,7 @@ public class DetailFragment extends Fragment implements
 
     private final String LOG_TAG = DetailFragment.class.getSimpleName();
     static final int WEATHER_DETAIL_LOADER_ID = 1;
+    static final String DATE_URI_KEY = "DateUri";
 
     static final String[] DETAIL_COLUMNS = {
             // In this case the id needs to be fully qualified with a table name, since
@@ -66,6 +67,7 @@ public class DetailFragment extends Fragment implements
 
     final static String SUNSHINE_HASHTAG = "#SunshineApp";
     private String mForecastStr;
+    private Uri mUri;
 
     ShareActionProvider mShareActionProvider;
 
@@ -85,6 +87,16 @@ public class DetailFragment extends Fragment implements
         setHasOptionsMenu(true);
     }
 
+    public static DetailFragment newInstance(Uri dateUri) {
+        DetailFragment detailFrag = new DetailFragment();
+
+        Bundle args = new Bundle();
+        args.putParcelable(DATE_URI_KEY, dateUri);
+        detailFrag.setArguments(args);
+
+        return detailFrag;
+    }
+
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -98,13 +110,16 @@ public class DetailFragment extends Fragment implements
         if(mForecastStr != null) {
             mShareActionProvider.setShareIntent(getShareIntent());
         }
-
-//            shareActionProvider.setShareIntent(getShareIntent());
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+        Bundle fragArgs = getArguments();
+        if (fragArgs != null) {
+            mUri = fragArgs.getParcelable(DATE_URI_KEY);
+        }
 
         View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
 
@@ -138,26 +153,35 @@ public class DetailFragment extends Fragment implements
         return shareIntent;
     }
 
+    public void onLocationChanged() {
+        Uri uri = mUri;
+        String newLocation = Utility.getPreferredLocation(getActivity());
+
+        if (uri != null) {
+            //Figure out the date we're currently looking at
+            long date = WeatherContract.WeatherEntry.getDateFromUri(uri);
+            Uri updateUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(newLocation, date);
+            mUri = updateUri;
+            getLoaderManager().restartLoader(WEATHER_DETAIL_LOADER_ID, null, this);
+        }
+
+    }
+
     @Override
     public Loader<Cursor> onCreateLoader(int loaderId, Bundle args) {
         switch (loaderId) {
             case WEATHER_DETAIL_LOADER_ID :
-                Uri weatherForLocationAndDateUri = null;
-                Intent intent = getActivity().getIntent();
-
-                if(intent != null) {
-                    weatherForLocationAndDateUri = intent.getData();
+                if(mUri == null) {
+                    return null;
                 }
-                if (weatherForLocationAndDateUri != null) {
-                    return new CursorLoader(
-                            getActivity(),
-                            weatherForLocationAndDateUri,
-                            DETAIL_COLUMNS,
-                            null,
-                            null,
-                            null
-                    );
-                }
+                return new CursorLoader(
+                        getActivity(),
+                        mUri,
+                        DETAIL_COLUMNS,
+                        null,
+                        null,
+                        null
+                );
 
             default:
                 Log.e(LOG_TAG, "Unrecognized loaderId value");
@@ -197,7 +221,8 @@ public class DetailFragment extends Fragment implements
         mMinTempTextView.setText(Utility.formatTemperature(getActivity(), minTemp, isMetric));
 
         //Populate description and icon
-        mIconImageView.setImageResource(R.mipmap.ic_launcher);
+        int conditionId = data.getInt(COL_WEATHER_CONDITION_ID);
+        mIconImageView.setImageResource(Utility.getArtResourceForWeatherCondition(conditionId));
 
         String description = data.getString(COL_WEATHER_DESC);
         mDescriptionTextView.setText(description);

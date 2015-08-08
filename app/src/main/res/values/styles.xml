@@ -5,4 +5,8 @@
         <!-- Customize your theme here. -->
     </style>
 
+    <style name="ForecastListStyle">
+        <!-- This is an empty style on non-tablet devices. -->
+    </style>
+
 </resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="ForecastListStyle">
+        <!-- On tablets, we're going to use a style to show that the list item has been selected -->
+        <item name="android:choiceMode">singleChoice</item>
+    </style>
+
+
+</resources>

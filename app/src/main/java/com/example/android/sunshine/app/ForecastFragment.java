@@ -1,13 +1,13 @@
 package com.example.android.sunshine.app;
 
-import android.content.Intent;
+import android.app.Activity;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.content.CursorLoader;
 import android.support.v4.app.Fragment;
-import android.support.v4.content.Loader;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -26,6 +26,7 @@ import com.example.android.sunshine.app.data.WeatherContract;
  */
 public class ForecastFragment extends Fragment implements
         LoaderManager.LoaderCallbacks<Cursor>{
+
     private final String LOG_TAG = ForecastFragment.class.getSimpleName();
     private final double CELCIUS_TO_FAHRENHEIT_RATIO = 9/5;
     private final int CELCIUS_TO_FAHRENHEIT_OFFSET = 32;
@@ -62,6 +63,7 @@ public class ForecastFragment extends Fragment implements
     static final int COL_COORD_LONG = 8;
 
     private ForecastAdapter mForecastAdapter;
+    private Callback mCallback;
 
     public ForecastFragment() {
     }
@@ -72,6 +74,33 @@ public class ForecastFragment extends Fragment implements
 
         // We have options menu
         setHasOptionsMenu(true);
+    }
+
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+        /**
+         * DetailFragmentCallback for when an item has been selected.
+         */
+        public void onItemSelected(Uri dateUri);
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+
+        //Make sure that the parent activity has implemented the onItemSelected callback interface
+        try {
+            mCallback = (Callback) activity;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(activity.toString()
+                    + " must implement Callback");
+        }
+
     }
 
     @Override
@@ -116,10 +145,9 @@ public class ForecastFragment extends Fragment implements
                 if (cursor != null) {
                     String locationSetting = Utility.getPreferredLocation(getActivity());
 
-                    Intent intent = new Intent(getActivity(), DetailActivity.class)
-                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
-                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)));
-                    startActivity(intent);
+                    Uri dateUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
+                            locationSetting, cursor.getLong(COL_WEATHER_DATE));
+                    mCallback.onItemSelected(dateUri);
                 }
             }
         });
@@ -191,5 +219,6 @@ public class ForecastFragment extends Fragment implements
     public void onLoaderReset (Loader<Cursor> loader) {
         mForecastAdapter.swapCursor(null);
     }
+
 
 }

@@ -63,7 +63,7 @@ public class ForecastAdapter extends CursorAdapter {
     public void bindView(View view, Context context, Cursor cursor) {
         ViewHolder viewHolder = (ViewHolder) view.getTag();
 
-        // Set the date
+         // Set the date
         long date = cursor.getLong(ForecastFragment.COL_WEATHER_DATE);
         String formattedDate = Utility.getFriendlyDayString(view.getContext(), date);
         viewHolder.dateView.setText(formattedDate);
@@ -82,5 +82,16 @@ public class ForecastAdapter extends CursorAdapter {
         double low = cursor.getDouble(ForecastFragment.COL_WEATHER_MIN_TEMP);
         String formattedLow = Utility.formatTemperature(view.getContext(), low, isMetric);
         viewHolder.minTempView.setText(formattedLow);
+
+        //Set the icons
+        int conditionId = cursor.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID);
+        int viewType = getItemViewType(cursor.getPosition());
+        if(viewType == VIEW_TYPE_TODAY) {
+            viewHolder.iconView.setImageResource(Utility.getArtResourceForWeatherCondition(conditionId));
+        }
+        else {
+            viewHolder.iconView.setImageResource(Utility.getIconResourceForWeatherCondition(conditionId));
+
+        }
     }
 } 
