@@ -23,6 +23,8 @@ public class MainActivity extends ActionBarActivity
 
         setContentView(R.layout.activity_main);
 
+
+
         if (findViewById(R.id.weather_detail_container) != null) {
             // The detail container view will be present only in the large-screen layouts
             // (res/layout-sw600dp). If this view is present, then the activity should be
@@ -38,7 +40,12 @@ public class MainActivity extends ActionBarActivity
             }
         } else {
             mTwoPane = false;
+//            getSupportActionBar().setElevation(0f);
         }
+
+        ForecastFragment forecastFragment = ((ForecastFragment) getSupportFragmentManager()
+            .findFragmentById(R.id.fragment_forecast));
+        forecastFragment.setUseTodayLayout(!mTwoPane);
     }
 
     @Override
